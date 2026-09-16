@@ -4,7 +4,7 @@
 PlayerSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 29
-  productGUID: 25131472efcf60e419622d42407a8abf
+  productGUID: 82f6ee94be098ce4e810c92dd07a293d
   AndroidProfiler: 0
   AndroidFilterTouchesWhenObscured: 0
   AndroidEnableSustainedPerformanceMode: 0
@@ -13,7 +13,7 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 60
   companyName: DefaultCompany
-  productName: VacumCleaner
+  productName: DroneCarDocking
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -829,8 +829,7 @@ PlayerSettings:
   webGLCloseOnQuit: 0
   webWasm2023: 1
   webEnableSubmoduleStrippingCompatibility: 0
-  scriptingDefineSymbols:
-    Standalone: SENTIS_ANALYTICS_ENABLED;APP_UI_EDITOR_ONLY
+  scriptingDefineSymbols: {}
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
@@ -852,14 +851,14 @@ PlayerSettings:
   editorAssembliesCompatibilityLevel: 1
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: VacumCleaner
+  metroPackageName: DroneCarDocking
   metroPackageVersion: 
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
-  metroApplicationDescription: VacumCleaner
+  metroApplicationDescription: DroneCarDocking
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0
@@ -927,13 +926,13 @@ PlayerSettings:
   qnxGraphicConfPath: 
   apiCompatibilityLevel: 6
   captureStartupLogs: {}
-  activeInputHandler: 1
+  activeInputHandler: 2
   windowsGamepadBackendHint: 0
   enableDirectStorage: 0
-  cloudProjectId: 1f0b75d0-c534-44bb-9d04-3ceefde82b04
+  cloudProjectId: 3c2b0c55-d04a-4adc-b428-d3eee5edfd7f
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: VacumCleaner
+  projectName: DroneCarDocking
   organizationId: karlssoj
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
