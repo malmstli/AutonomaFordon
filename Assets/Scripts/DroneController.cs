@@ -1,7 +1,10 @@
 using UnityEngine;
+using Unity.MLAgents;
+using Unity.MLAgents.Actuators;
+
 
 [RequireComponent(typeof(Rigidbody))]
-public class DroneController : MonoBehaviour
+public class DroneController : Agent
 {
     public float thrustChangeRate = 10.0f;
     public float maximumThrustOffset = 20.0f;
@@ -17,16 +20,104 @@ public class DroneController : MonoBehaviour
     private float targetPitch;
     private float targetRoll;
 
+    private bool inMP = false;
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         rb.constraints |= RigidbodyConstraints.FreezeRotationY;
     }
 
-    private void FixedUpdate()
+    public override void OnActionReceived(ActionBuffers actions)
     {
-        UpdateThrustOffset();
-        UpdateTargetTilt();
+        float horizontalmvmnt = actions.DiscreteActions[0]; // target tilt ApplyTiltTorque();
+        
+        float verticalmvmnt = actions.DiscreteActions[1]; //thrustoffset ApplyThrust();
+        
+        switch (horizontalmvmnt)
+        {
+            case 0:
+            targetPitch = Mathf.Clamp(targetPitch, -maximumTiltAngle, maximumTiltAngle);
+            targetRoll = Mathf.Clamp(targetRoll, -maximumTiltAngle, maximumTiltAngle);
+            ApplyTiltTorque();
+            break;
+
+            case 1:
+            targetPitch += tiltChangeRate * Time.fixedDeltaTime;
+            ApplyTiltTorque();
+            break;
+            
+            case 2:
+            targetPitch -= tiltChangeRate * Time.fixedDeltaTime;
+            ApplyTiltTorque();
+            break;
+            
+            case 3:
+            targetRoll -= tiltChangeRate * Time.fixedDeltaTime;
+            ApplyTiltTorque();
+            break;
+            
+            case 4:
+            targetRoll += tiltChangeRate * Time.fixedDeltaTime;
+            ApplyTiltTorque();
+            break;
+
+        }
+        
+        if (horizontalmvmnt == 1)
+        {
+            thrustOffset += thrustChangeRate * Time.fixedDeltaTime;
+        }
+        else if (horizontalmvmnt == 2)
+        {
+            thrustOffset -= thrustChangeRate * Time.fixedDeltaTime;
+        }
+        else
+        {
+            thrustOffset = Mathf.MoveTowards(
+                thrustOffset,
+                0.0f,
+                thrustReturnRate * Time.fixedDeltaTime);
+        }
+
+        thrustOffset = Mathf.Clamp(
+            thrustOffset,
+            -maximumThrustOffset,
+            maximumThrustOffset);
+
+        ApplyThrust();
+    }
+
+    private void OnllisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("DroneGoal"))
+        {
+            AddReward(1);
+            Debug.Log("Drone landed successfully");
+            EndEpisode();
+        }else if (collision.gameObject.CompareTag("Building"))
+        {
+            AddReward(-1);
+            Debug.Log("Drone crashed into building, ending episide");
+            EndEpisode();
+        }
+    }
+
+    private void TriggerEnter(Collider other)
+    {
+        if(other.gameObject.tag == "MeetingPoint")
+        {
+            if(!inMP){AddReward(0.5f);}
+            inMP = true;
+
+        }
+
+    }
+
+    public override void Heuristic(in ActionBuffers actionsOut)
+    {
+        UpdateThrustOffset();  //Här keyboard input
+        UpdateTargetTilt();     //Här o
         ApplyThrust();
         ApplyTiltTorque();
         LimitTiltAngle();
