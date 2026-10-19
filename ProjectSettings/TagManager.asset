@@ -8,6 +8,7 @@ TagManager:
   - Building
   - DroneGoal
   - Floor
+  - truck
   layers:
   - Default
   - TransparentFX
