@@ -104,3 +104,21 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Generated training/evaluation outputs and Python caches.
+/results/
+/EvaluationReports/
+/Assets/ML-Agents/Timers/
+/Assets/ML-Agents/Timers.meta
+/Assets/ML-Agents.meta
+__pycache__/
+*.pyc
+*.pt
+*.pth
+*.ckpt
+!config/checkpoints/RoverFinal_Experimental_20261020.pt
+# Keep local archives outside this repository.
+/backups/
+/archives/
+/*.zip
+/*.7z

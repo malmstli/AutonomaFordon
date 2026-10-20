@@ -1,0 +1,9 @@
+{
+  "source": "C:\\Users\\35845\\Downloads\\AutonomaFordon_RoverExperiment_20261020_ce5dfbf0\\results\\RoverFinal_ExperimentalSeed_20261020\\Rover\\checkpoint.pt",
+  "sha256": "363daa8051a0b2783f75ad564b4858d25fb40f0a906c847910b3489c49848502",
+  "experimental_steps": 32861,
+  "initialized_from_user_level3_step": 499941,
+  "observations": 21,
+  "continuous_actions": 2,
+  "demonstration_model": "Assets/models/RoverFinal_Experimental_20261020.onnx"
+}
