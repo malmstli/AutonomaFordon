@@ -1,0 +1,79 @@
+# Opt-in 21-observation final environment. Keep the original Level 3 YAML unchanged.
+engine_settings:
+  time_scale: 20
+behaviors:
+  Rover:
+    trainer_type: ppo
+    hyperparameters:
+      batch_size: 256
+      buffer_size: 4096
+      learning_rate: 0.00005
+      beta: 0.005
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+      learning_rate_schedule: linear
+    network_settings:
+      normalize: false
+      hidden_units: 128
+      num_layers: 2
+    reward_signals:
+      extrinsic:
+        gamma: 0.995
+        strength: 1.0
+    max_steps: 1500000
+    time_horizon: 128
+    summary_freq: 10000
+    checkpoint_interval: 25000
+    keep_checkpoints: 60
+environment_parameters:
+  rover_hill_difficulty: 0.5
+  rover_stage:
+    curriculum:
+      - name: RecoveryForwardAndSides
+        value: 0
+        completion_criteria:
+          measure: reward
+          behavior: Rover
+          min_lesson_length: 200
+          threshold: 6.5
+          signal_smoothing: true
+          require_reset: true
+      - name: NavigationRecovery
+        value: 1
+        completion_criteria:
+          measure: reward
+          behavior: Rover
+          min_lesson_length: 200
+          threshold: 6.5
+          signal_smoothing: true
+          require_reset: true
+      - name: OneFixedObstacle
+        value: 2
+        completion_criteria:
+          measure: reward
+          behavior: Rover
+          min_lesson_length: 300
+          threshold: 6.5
+          signal_smoothing: true
+          require_reset: true
+      - name: FixedBuildingsAndRocks
+        value: 3
+        completion_criteria:
+          measure: reward
+          behavior: Rover
+          min_lesson_length: 300
+          threshold: 6.5
+          signal_smoothing: true
+          require_reset: true
+      - name: SparseRandomObstacles
+        value: 4
+        completion_criteria:
+          measure: reward
+          behavior: Rover
+          min_lesson_length: 400
+          threshold: 6.5
+          signal_smoothing: true
+          require_reset: true
+      - name: MixedFinalEnvironment
+        value: 5
