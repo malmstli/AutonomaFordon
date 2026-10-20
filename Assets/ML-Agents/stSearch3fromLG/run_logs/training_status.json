@@ -1,0 +1,38 @@
+{
+    "DroneFlight": {
+        "checkpoints": [
+            {
+                "steps": 499938,
+                "file_path": "results\\stSearch3fromLG\\DroneFlight\\DroneFlight-499938.onnx",
+                "reward": -3.1102750663024685,
+                "creation_time": 1792498283.8464997,
+                "auxillary_file_paths": [
+                    "results\\stSearch3fromLG\\DroneFlight\\DroneFlight-499938.pt"
+                ]
+            },
+            {
+                "steps": 500002,
+                "file_path": "results\\stSearch3fromLG\\DroneFlight\\DroneFlight-500002.onnx",
+                "reward": -3.1102750663024685,
+                "creation_time": 1792498283.9194953,
+                "auxillary_file_paths": [
+                    "results\\stSearch3fromLG\\DroneFlight\\DroneFlight-500002.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 500002,
+            "file_path": "results\\stSearch3fromLG\\DroneFlight.onnx",
+            "reward": -3.1102750663024685,
+            "creation_time": 1792498283.9194953,
+            "auxillary_file_paths": [
+                "results\\stSearch3fromLG\\DroneFlight\\DroneFlight-500002.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.1.1+cpu"
+    }
+}

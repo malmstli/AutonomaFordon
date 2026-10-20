@@ -29,13 +29,17 @@ public class DroneController : Agent
     public float maximumLandingSpeed = 1.0f;
     public float maximumLandingTiltAngle = 15.0f;
     public float maximumLandingAngularSpeed = 1.0f;
+    public float landingReward = 1.0f;
+    public float groundRayDistance = 50.0f;
     public float observationDistance = 50.0f;
     public float progressRewardScale = 0.01f;
     public float retreatPenaltyScale = 0.0001f;
-    public float waypointReward = 0.25f;
+    public float meetingPointReward = 1.0f;
+    public float meetingPointDescentRewardScale = 0.001f;
     public float stepPenalty = -0.0005f;
     public float crashPenalty = -1.0f;
-    public float landingReward = 1.0f;
+    public float timeoutPenalty = -1.0f;
+    public float maximumEpisodeDuration = 150.0f;
 
     private Rigidbody rb;
     private Terrain terrain;
@@ -46,9 +50,11 @@ public class DroneController : Agent
     private float requestedThrust;
     private float requestedPitch;
     private float requestedRoll;
-    private bool reachedMeetingPoint;
     private bool episodeEnded;
+    private bool reachedMeetingPoint;
+    private float episodeElapsedTime;
     private float previousTargetDistance;
+    private float previousDroneHeight;
     private Vector3 startingPosition;
     private Quaternion startingRotation;
 
@@ -71,29 +77,43 @@ public class DroneController : Agent
 
         if (meetingPoint == null || landingPoint == null || landingTruckRoot == null)
         {
-            Debug.LogError("SampleScene must contain objects tagged MeetingPoint and DroneGoal under Truck.", this);
+            Debug.LogError("SampleScene must contain a MeetingPoint and a DroneGoal under the object tagged truck.", this);
         }
     }
 
     private void ResolveObjectiveReferences()
     {
         GameObject meetingPointObject = GameObject.FindGameObjectWithTag("MeetingPoint");
-        GameObject droneGoalObject = GameObject.FindGameObjectWithTag("DroneGoal");
-        GameObject truckObject = GameObject.FindGameObjectWithTag("truck");
-
         meetingPoint = meetingPointObject == null ? null : meetingPointObject.transform;
+
+        GameObject droneGoalObject = GameObject.FindGameObjectWithTag("DroneGoal");
         landingPoint = droneGoalObject == null ? null : droneGoalObject.transform;
+
+        GameObject truckObject = GameObject.FindGameObjectWithTag("truck");
         landingTruckRoot = truckObject == null ? null : truckObject.transform;
 
-        if (landingPoint != null && landingTruckRoot != null && !landingPoint.IsChildOf(landingTruckRoot))
+        if (landingPoint != null && landingTruckRoot != null &&
+            landingPoint != landingTruckRoot && !landingPoint.IsChildOf(landingTruckRoot))
         {
-            Debug.LogError("The DroneGoal object must be a child of the object tagged truck.", this);
+            Debug.LogError("The DroneGoal object must be on or under the object tagged truck.", this);
             landingPoint = null;
         }
     }
 
     private void FixedUpdate()
     {
+        if (episodeEnded)
+        {
+            return;
+        }
+
+        episodeElapsedTime += Time.fixedDeltaTime;
+        if (episodeElapsedTime >= maximumEpisodeDuration)
+        {
+            EndEpisodeWithReward(timeoutPenalty);
+            return;
+        }
+
         thrustOffset = Mathf.MoveTowards(
             thrustOffset,
             requestedThrust * maximumThrustOffset,
@@ -202,9 +222,11 @@ public class DroneController : Agent
         thrustOffset = 0.0f;
         targetPitch = 0.0f;
         targetRoll = 0.0f;
-        reachedMeetingPoint = false;
         episodeEnded = false;
+        reachedMeetingPoint = false;
+        episodeElapsedTime = 0.0f;
         previousTargetDistance = GetTargetDistance();
+        previousDroneHeight = rb.position.y;
     }
 
     private Vector3 GetLocalTiltAngles()
@@ -269,13 +291,22 @@ public class DroneController : Agent
         sensor.AddObservation(targetPitch / tiltScale);
         sensor.AddObservation(targetRoll / tiltScale);
 
-        Transform target = GetCurrentTarget();
+        Transform target = GetTargetTransform();
         Vector3 targetOffset = target == null
             ? Vector3.zero
             : transform.InverseTransformDirection(target.position - transform.position);
         float targetScale = Mathf.Max(observationDistance, 0.01f);
         sensor.AddObservation(Vector3.ClampMagnitude(targetOffset / targetScale, 1.0f));
-        sensor.AddObservation(reachedMeetingPoint ? 1.0f : 0.0f);
+        float rayDistance = Mathf.Max(groundRayDistance, 0.01f);
+        bool groundDetected = Physics.Raycast(
+            transform.position,
+            Vector3.down,
+            out RaycastHit groundHit,
+            rayDistance,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Ignore);
+        sensor.AddObservation(groundDetected ? groundHit.distance / rayDistance : 1.0f);
+        sensor.AddObservation(groundDetected ? 1.0f : 0.0f);
     }
 
     public override void OnActionReceived(ActionBuffers actions)
@@ -288,24 +319,36 @@ public class DroneController : Agent
 
     private void UpdateObjectiveReward()
     {
-        if (episodeEnded || meetingPoint == null || landingPoint == null || landingTruckRoot == null)
+        if (episodeEnded)
+        {
+            return;
+        }
+
+        bool insideMeetingPoint = meetingPoint != null &&
+            Vector3.Distance(transform.position, meetingPoint.position) <= meetingPointRadius;
+        if (reachedMeetingPoint && insideMeetingPoint)
+        {
+            AddReward((previousDroneHeight - rb.position.y) * meetingPointDescentRewardScale);
+        }
+        previousDroneHeight = rb.position.y;
+
+        if (meetingPoint == null || landingPoint == null)
         {
             return;
         }
 
         AddReward(stepPenalty);
-
-        if (!reachedMeetingPoint && Vector3.Distance(transform.position, meetingPoint.position) <= meetingPointRadius)
+        if (!reachedMeetingPoint && insideMeetingPoint)
         {
             reachedMeetingPoint = true;
-            AddReward(waypointReward);
-            previousTargetDistance = Vector3.Distance(transform.position, landingPoint.position);
+            AddReward(meetingPointReward);
+            previousTargetDistance = GetTargetDistance();
             return;
         }
 
         float currentDistance = GetTargetDistance();
         float distanceProgress = previousTargetDistance - currentDistance;
-        float rewardScale = !reachedMeetingPoint && distanceProgress < 0.0f
+        float rewardScale = distanceProgress < 0.0f
             ? retreatPenaltyScale
             : progressRewardScale;
         AddReward(Mathf.Clamp(distanceProgress * rewardScale, -0.05f, 0.05f));
@@ -314,33 +357,20 @@ public class DroneController : Agent
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (episodeEnded || meetingPoint == null || landingPoint == null || landingTruckRoot == null)
+        if (episodeEnded || landingPoint == null)
         {
             return;
         }
 
-        if (!IsLandingSurface(collision.collider) || !reachedMeetingPoint)
-        {
-            EndEpisodeWithReward(crashPenalty);
-            return;
-        }
-
-        Rigidbody otherBody = collision.rigidbody;
-        Vector3 otherVelocity = otherBody == null ? Vector3.zero : otherBody.linearVelocity;
-        Vector3 relativeVelocity = rb.linearVelocity - otherVelocity;
-        float tiltAngle = Vector3.Angle(transform.up, Vector3.up);
-        bool insideLandingZone = Vector3.Distance(rb.worldCenterOfMass, landingPoint.position) <= landingRadius;
-        bool landedSafely = insideLandingZone &&
-            relativeVelocity.magnitude <= maximumLandingSpeed &&
+        bool landedSafely = reachedMeetingPoint &&
+            IsLandingSurface(collision.collider) &&
+            Vector3.Distance(rb.worldCenterOfMass, landingPoint.position) <= landingRadius &&
+            HasLandingContact(collision) &&
+            GetRelativeLandingSpeed(collision) <= maximumLandingSpeed &&
             rb.angularVelocity.magnitude <= maximumLandingAngularSpeed &&
-            tiltAngle <= maximumLandingTiltAngle;
+            Vector3.Angle(transform.up, Vector3.up) <= maximumLandingTiltAngle;
 
         EndEpisodeWithReward(landedSafely ? landingReward : crashPenalty);
-    }
-
-    private bool IsLandingSurface(Collider other)
-    {
-        return other.transform.root == landingTruckRoot;
     }
 
     private void EndEpisodeWithReward(float reward)
@@ -350,15 +380,43 @@ public class DroneController : Agent
         EndEpisode();
     }
 
-    private Transform GetCurrentTarget()
+    private float GetTargetDistance()
+    {
+        Transform target = GetTargetTransform();
+        return target == null ? 0.0f : Vector3.Distance(transform.position, target.position);
+    }
+
+    private Transform GetTargetTransform()
     {
         return reachedMeetingPoint ? landingPoint : meetingPoint;
     }
 
-    private float GetTargetDistance()
+    private bool IsLandingSurface(Collider other)
     {
-        Transform target = GetCurrentTarget();
-        return target == null ? 0.0f : Vector3.Distance(transform.position, target.position);
+        return landingTruckRoot != null &&
+            (other.transform == landingTruckRoot || other.transform.IsChildOf(landingTruckRoot));
+    }
+
+    private bool HasLandingContact(Collision collision)
+    {
+        for (int i = 0; i < collision.contactCount; i++)
+        {
+            if (Vector3.Dot(collision.GetContact(i).normal, Vector3.up) >= 0.7f)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private float GetRelativeLandingSpeed(Collision collision)
+    {
+        Rigidbody otherBody = collision.rigidbody;
+        Vector3 relativeVelocity = otherBody == null
+            ? rb.linearVelocity
+            : rb.linearVelocity - otherBody.linearVelocity;
+        return relativeVelocity.magnitude;
     }
 
 }
